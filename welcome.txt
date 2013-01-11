@@ -1,0 +1,11 @@
+
+<div style="text-align: center; background: gray">
+<b>Detective Windows Mail</b><br> 
+ver. 0.33<br>
+autor: Adam Borys<br>
+mail: adamsk9000@wp.pl<br>
+licence: GNU <a href="/home/adam/DW/main/gpl-3.0.txt">read</a>
+</div>
+
+
+

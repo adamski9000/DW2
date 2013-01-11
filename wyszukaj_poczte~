@@ -1,0 +1,69 @@
+#!/bin/bash -x
+
+#format wywolania skryptu: wyszukaj_poczte uzytkowniksystemu klient_poczty. Np. wyszukaj_poczte admin WLM
+#wyszukuje poczte na kazdym koncie uzytkownika
+
+MIEJSCE_ZAPISU=`cat `
+
+#zabezpieczenie. Jesli za malo parametrow koniec skryptu
+[[ "$#" != 2  ]] && echo "No enough parameters"  && log "Script started without enough parameters. Error" && exit
+
+function log()
+{
+	#funkcja zapisuje loga
+	echo $1 >> ${KATALOG_GLOWNY}/log.txt 
+}
+
+UZYTKOWNIK=$1
+KLIENT_POCZTY=$2
+
+DATA=`date "+%y-%m-%d %H:%M:%S"`
+
+log "$DATA - Im preapereing to find email clients." 
+
+#tworzy katalogi z podkatalogami jesli nie ma
+mkdir -p ${KATALOG_GLOWNY}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY} && 
+log "- ${KLIENT_POCZTY} Mail folders on destination drive correct. OK" || 
+log " I coud NOT create ${KLIENT_POCZTY} Mail folders on destination drive. Error." 
+
+
+if [[ "$KLIENT_POCZTY" == "Outlook" ]]; then
+	SCIEZKA_DO_KATALOGU_KLIENTA="AppData/Local/Microsoft/Outlook"
+	#pliki pst porozrzucane sa w roznych miejscach, takze w katalogu Documents dlatego szuka w calym katalogu uzytkownika
+	SCIEZKA_DO_PLIKOW=
+	CZEGO_SZUKAMY="-name *.pst"
+elif [[ "$KLIENT_POCZTY" == "WLM" ]]; then
+	SCIEZKA_DO_KATALOGU_KLIENTA="AppData/Local/Microsoft/Windows Live Mail"
+	SCIEZKA_DO_PLIKOW="AppData/Local/Microsoft"
+	CZEGO_SZUKAMY="-type d -name Windows\ Live\ Mail"
+elif [[ "$KLIENT_POCZTY" == "Thunderbird" ]]; then
+	SCIEZKA_DO_KATALOGU_KLIENTA="AppData/Roaming/Thunderbird/Profiles"
+	SCIEZKA_DO_PLIKOW="AppData/Roaming/Thunderbird/Profiles"
+	#w tych katalogach jest cala poczta kont imap i pop3	
+	CZEGO_SZUKAMY="-type d -name ImapMail -o -iname Mail"
+else
+	exit
+fi
+
+
+for PARTYCJA in `cat ${KATALOG_GLOWNY}/system_info/partycja_systemowa_windows.txt`
+   do
+
+	log "$DATA - I am looking for ${KLIENT_POCZTY} folders on ${PARTYCJA}..."
+
+	#sprawdzamy czy katalog istnieje
+	if [ -d  "/media/${PARTYCJA}/Users/${UZYTKOWNIK}/${SCIEZKA_DO_KATALOGU_KLIENTA}" ];
+	  then
+
+		log "- I found ${KLIENT_POCZTY} folder in ${SCIEZKA_DO_KATALOGU_KLIENTA}"
+		
+		KOMENDA="find /media/${PARTYCJA}/Users/${UZYTKOWNIK}/${SCIEZKA_DO_PLIKOW} ${CZEGO_SZUKAMY}"
+		#musimy zastosowac eval gdyz bez tego wyszukiwanie katalogowu ze spacjami wywala bledy
+		eval $KOMENDA > ${KATALOG_GLOWNY}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY}/tocopy_${KLIENT_POCZTY}.txt && log "- I found and saved link to ${KLIENT_POCZTY} archives " || log "- I did not find archives in ${KLIENT_POCZTY}"
+
+ 	else 
+		log "- I did not find ${KLIENT_POCZTY} folder in ${SCIEZKA_DO_KATALOGU_KLIENTA}"
+	fi
+
+done
+

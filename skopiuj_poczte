@@ -1,0 +1,78 @@
+#!/bin/bash -x
+
+#format wywolania pliku: skopiuj_poczte uzytkownik klient poczty. Przyklad: skopiuj_poczte admin WLM
+#kopiuje poczte z zapisanych sciezek w katalogu poczty
+
+KATALOG_GLOWNY=/home/adam/DW/badanie
+
+[[ "$#" != 2  ]] && echo "No enough parameters"  && log "Script started without enough parameters. Error" && exit
+
+function log()
+{
+	echo $1 >> ${KATALOG_GLOWNY}/log.txt 
+}
+
+function konwertujpst()
+{
+	#funckja konwertyje plik pst ktory jest w katalogu outlook na eml do katalogu converted_to_eml
+
+	KATALOG_ZAPISU=$1
+	SCIEZKADOPLIKU=$2
+
+	log "- I start convert Outlook files to eml files"
+
+	#tworzy katalog jesli niema w ktorym beda skonwertowane emaile z pst do eml
+	if [ -d "${KATALOG_ZAPISU}/converted_to_eml" ]; then
+		log "- Folder converted_to_eml exists. OK" 
+	else
+		mkdir "${KATALOG_ZAPISU}/converted_to_eml" && log "- I created folder converted_to_eml correct." || { log "I could NOT create folder converted_to_eml. Error"; exit; }
+	fi
+
+	#wyciaga z calej sciezki tylko ostatni czlon ktory jest plikiem pst
+	PLIK_PST=${SCIEZKADOPLIKU##*/}
+
+	#zapisuje z katalogu Outloog pliki pst do katalogu converted_to_eml skonwertowane pliki
+	readpst  -D -S -e -w -o ${KATALOG_ZAPISU}/converted_to_eml ${KATALOG_ZAPISU}/${PLIK_PST} && log "- I converted Outlook file ${PLIK_PST} to eml file correct" || log "- I coud NOT convert ${PLIK_PST} file"
+}
+
+UZYTKOWNIK=$1
+KLIENT_POCZTY=$2
+
+KATALOG_PRZEZNACZENIA=${KATALOG_GLOWNY}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY} 
+
+DATA=`date "+%y-%m-%d %H:%M:%S"`
+
+log "$DATA - Preapering to copy ${KLIENT_POCZTY} files."
+
+if [ ! -d ${KATALOG_PRZEZNACZENIA} ]; then 
+	log "-  Error with copy. No ${KATALOG_PRZEZNACZENIA} folder."
+	exit 
+elif [ ! -e ${KATALOG_PRZEZNACZENIA}/tocopy_${KLIENT_POCZTY}.txt ]; then
+	log "-  Error with copy. No path_${KLIENT_POCZTY}.txt file."
+	exit 
+elif [ ! -s ${KATALOG_PRZEZNACZENIA}/tocopy_${KLIENT_POCZTY}.txt ]; then
+	log "-  Error with copy. File path_${KLIENT_POCZTY}.txt is empty."
+	exit  
+else
+	#gdy aoutlook - brak parametru, kopiuje tylko pliki pst
+	#gdy WLM lub Thunderbird nadaje parametr do kopiowania calych katalogow, podkatalogow i plikow
+        [ "$KLIENT_POCZTY" == "Outlook" ] && PARAMETR="" || PARAMETR="-R" 
+	
+	#wczytuje sciezka po sciezce - pliki do skopiowania i kopiuje pliki jeden po drugim
+	while read SCIEZKA_DO_PLIKU
+	  do
+		#gdy outlook kopiuje tylko wskazany plik gdy inne klienty kopije calle katalogi z plikami
+		cp $PARAMETR "$SCIEZKA_DO_PLIKU"  "$KATALOG_PRZEZNACZENIA" 
+		#jesli sie uda skopiowac
+		if [ "$?" == 0 ]; then		
+			log "-  Coped ${SCIEZKA_DO_PLIKU} file to ${KATALOG_PRZEZNACZENIA} - OK."; 
+			#jesli Outlook to od razu konweryjemy pliki pst na eml
+			[[ "$KLIENT_POCZTY" == "Outlook" ]] && konwertujpst "$KATALOG_PRZEZNACZENIA" "$SCIEZKA_DO_PLIKU"; 
+		else
+			log "-  Error with copy ${SCIEZKA_DO_PLIKU} file to ${KATALOG_PRZEZNACZENIA}. Error." 
+		fi
+
+	done < ${KATALOG_PRZEZNACZENIA}/tocopy_${KLIENT_POCZTY}.txt
+fi
+
+

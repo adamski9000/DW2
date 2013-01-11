@@ -1,0 +1,42 @@
+#!/bin/bash -x
+
+NAZWA_PROGRAMU="Detective Windows 0.3"
+IKONA=~/DW/main/graf/DooFi_detective64.png
+
+FILE=welcome.txt
+
+#yad --title "TITLE" "VERSION" --button="gtk-ok:0" --width 300 --text=$"Exit sound test!!"
+
+function DAT()
+{
+	echo `date "+%y-%m-%d %H:%M:%S.%N"`
+	echo "XXXX - $FILE"
+	echo "TEST" > "/home/adam/DW2/test.txt"
+}
+
+licznik=0
+while read DIC
+do
+	let licznik++
+	dic[licznik]=$DIC
+	echo "TO jest: ${dic[licznik]}"
+done < ./test3
+
+echo ${dic[1]}
+DAT
+
+PART="/dev/sda1 /dev/sda2"
+X=`grep '/dev' $PART` 
+echo $X 
+
+
+#zenity --text-info --title="License" --filename=$FILE --html --checkbox="I read and accept the terms."
+
+#zenity --notification --window-icon="info" --text="This computer has no Windows disk ! Program finished"
+
+#yad --title="$NAZWA_PROGRAMU" --text="I look for disks and partitions" --timeout=3 --no-buttons
+
+#./test2 NAZWA
+#find $HOME -name '*.ps' | yad --progress --pulsate
+
+#yad --title="Desktop entry editor" --text="Simple desktop entry editor" --form --field="Type:CB" --field="Name" --field="Generic name" --field="Comment" --field="Command:FL" --field="Icon" --field="In terminal:CHK" --field="Startup notify:CHK" "Application" "Name" "Generic name" "This is the comment" "/usr/bin/yad" "yad" FALSE TRUE --button="WebUpd8:2" --button="gtk-ok:0" --button="gtk-cancel:1"

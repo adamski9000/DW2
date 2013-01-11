@@ -1,0 +1,153 @@
+#!/bin/bash -x
+
+#Detective Windows Mail
+#autor: Adam Borys
+#license: GNU
+
+#ver. 0.33
+
+
+NAZWA_PROGRAMU="Detective Windows 0.3"
+IKONA=~/DW/main/graf/DooFi_detective64.png
+PLIK_LICENCJA="welcome.txt"
+
+function log() {
+	echo $1 >> ${MIEJSCE_ZAPISU}/log.txt 
+}
+
+function TIM() {
+	#czas z nanosekundami
+	echo `date "+%y-%m-%d %H:%M:%S.%N"`
+}
+
+function zamontuj_partycje() {
+	#wyszukuje wszystkie dyski i partycje win i przypisuje do zmiennnej
+	PARTYCJE=$(sudo fdisk -l | 
+	#wyszykuje tylko te windosowe 
+	grep 'HPFS\|NTFS\|exFAT\|FAT' |
+	#pobiera pierwsza kolumne np /dev/sda1/
+	awk '{ print $1 }' | 
+	#selekcjonuje np. z /dev/sda1 drugi czlon - sda1
+	cut -d / -f 3)
+
+	[ "$PARTYCJE" == "" ] && { yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="<b>This computer has no NTFS / FAT disks or I van NOT find it ! Program finished</b>"; exit; }
+
+	for PARTYCJA_DO_ZAMONTOWANIA in $PARTYCJE
+	do
+		#jesli w pliku mounts nie istnieje nazwa to nie zamontowany, jesli istniej to zamontowany i nic nie robimy
+		if [ ! -n "$(grep ${PARTYCJA_DO_ZAMONTOWANIA} /proc/mounts)" ]
+		then
+	    		#sprawdzamy czy katalog juz istnieje. Jesli istnieje montujemy 
+			if [ -d /media/${PARTYCJA_DO_ZAMONTOWANIA} ]; then 
+				sudo mount -r /dev/${PARTYCJA_DO_ZAMONTOWANIA} /media/${PARTYCJA_DO_ZAMONTOWANIA}  
+			else 
+				#jesli nie istnieje tworzymy go i montujemy
+				sudo mkdir /media/${PARTYCJA_DO_ZAMONTOWANIA} 
+				sudo mount -r /dev/${PARTYCJA_DO_ZAMONTOWANIA} /media/${PARTYCJA_DO_ZAMONTOWANIA}
+			fi	
+		fi
+	done
+	
+	#zwraca zamontowane partycje
+	echo  $PARTYCJE
+}
+
+function wyszukaj_partycje_systemowa_win()
+{
+	PLIK="${MIEJSCE_ZAPISU}/system_info/partitions_system_win"
+
+	for PARTYCJA in `cat ${MIEJSCE_ZAPISU}/system_info/partitions_win`
+	do
+		#sprawdzamy czy to nie przypadkowy katalog, sprawdzajac katalogi domyslne windows czy istnieja
+		if [ -d /media/${PARTYCJA}/Users/Public/Desktop ] && [ -d /media/${PARTYCJA}/Users/Default/AppData ]
+			then
+				echo $PARTYCJA >> $MIEJSCE_ZAPISU/system_info/partitions_system_win
+				log "5) $(TIM) - Disk with Windows system found on disk: ${PARTYCJA}. OK"	
+		fi
+	done
+
+	#sprawdzamy czy wogole znaleziono jakies dyski systemowe.
+	#czyli czy plik istnieje i czy nie jest pusty. W innym przypadku koniec
+	[ -e $PLIK -a -s $PLIK ] && return 0 || { yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="This computer has NOT disks with operating system Windows or I can NOT find it. Program finished !"; exit; }
+}
+
+#gui startowe - akceptacja warunkow licencji 
+zenity --text-info --title="Detective Windows" --filename=$PLIK_LICENCJA --html --checkbox="I read and accept the terms."
+
+case $? in
+    0)
+        echo "Accept licence and start program"
+	;;
+    1)
+        echo "NOT accept licences and stop program"
+	exit
+	;;
+    -1)
+	echo "NOT accept licences and stop program"
+        yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="Some unexpected error. Program finished !"
+	exit
+	;;
+esac
+
+#zwraca zamontowane partycje windows w formacie np. sda1 sda3
+PARTYCJE=$(zamontuj_partycje)
+
+#gui - podaj nazwe badania
+NAZWA_SPRAWY=$(yad --title="$NAZWA_PROGRAMU" --image=$IKONA --text="<b>  Insert name of case</b>" --form --field="Name of case" "First case")
+
+#gdy pole jest puste to koniec programu
+[ "$NAZWA_SPRAWY" == "" ] && exit
+
+#usowamy separator | dodany na koncu przez yad
+NAZWA_SPRAWY=$(echo $NAZWA_SPRAWY | tr -d "|" )
+
+#zamieniamy spacje na podkreslenia
+NAZWA_SPRAWY=$(echo $NAZWA_SPRAWY | tr " " "_")
+
+#data bedzie czescia katalogu. Dzieki temu unikniemy problemow z tymi samymi nazwami katalogow
+CZAS_UTWORZENIA=`date "+%y%m%d_%H%M%S"`
+
+#katalog w ktorym beda zapisane wszystkie wyniki z badania systemu
+KATALOG_SPRAWY=${NAZWA_SPRAWY}_${CZAS_UTWORZENIA}
+
+#gui - podaj na jakim nosniku/katalogu zapisac badanie
+MIEJSCE_ZAPISU=$(yad --file --directory --title="$NAZWA_PROGRAMU" --image=$IKONA --text="<b>  Where to save result ?</b>" --height=380)
+
+#gdy pole jest puste to koniec programu
+[ "$MIEJSCE_ZAPISU" == "" ] && exit
+
+#bardzo wazna zmienna. Wszstekie skrypty beda odnosic sie do tego katalogu
+#katalog glownym staje sie katalog sprawy
+MIEJSCE_ZAPISU="${MIEJSCE_ZAPISU}/${KATALOG_SPRAWY}"
+
+#tworzy glowne katalogi z podkatalogami
+mkdir -p "${MIEJSCE_ZAPISU}/system_info" && mkdir "${MIEJSCE_ZAPISU}/Users" 
+#sprawdzamy czy katalogi zostaly utworzone poprawnie 
+if [ -d "${MIEJSCE_ZAPISU}/Users" -a -d "${MIEJSCE_ZAPISU}/system_info" ]; then
+	log 
+	log "2) $(TIM) - Main folders created correct in ${MIEJSCE_ZAPISU}. OK" 
+else
+	yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="Main folders NOT created correct in ${MIEJSCE_ZAPISU}. Error. Program finished"
+	exit 
+fi
+
+#zapisujemy plik z sciezka do katalogu, gdzie beda zapisywane wszystkie wyniki dzialan programu
+log "3) $(TIM) - I try to save file -> global_path"
+echo $MIEJSCE_ZAPISU > "${MIEJSCE_ZAPISU}/system_info/global_path" && log "3) $(TIM) - I saved file global_path correct. OK"
+
+#zapisujemy plik z informacja o wszystkich partycjach windowsowych w komputerze 
+log "4) $(TIM) - I try to save file -> partitions_win"
+echo $PARTYCJE > "${MIEJSCE_ZAPISU}/system_info/partitions_win" && log "4) $(TIM) - I saved file partitions_win correct. OK"
+
+#wyszukujemy i zapisujemy plik z informacja o partycjach z systemem win, a dokladnie z katalogiem Users
+log "5) $(TIM) - I look for partitions with Windows system."
+wyszukaj_partycje_systemowa_win
+
+#gui - wybieramy uzytkownikow systemu ktorych chcemy poddac badaniu
+
+
+
+
+
+
+

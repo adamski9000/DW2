@@ -1,0 +1,48 @@
+help do programu
+
+Glowne skrypty programu znajduja sie w katalogu main
+
+1. Struktura katalogow budowanych przez program
+a.katalog glowny badania -investigation. Dodawany numer daty w formacie rok miesiac dzien godzina minuta sekunda np. investigation_121230105500
+b.katalog "system_info"- tu skrypty umieszczaja kluczowe zebrane informacje o systemie takie jak:
+	- partycje_win - znalezione partycje windows np. sda1
+	- partycje_win_full_path - jak wyzej z pelna sciezka np. /dev/sda1
+c.katalog Users - gdzie znajduja sie wszystie wyniki z badania systemu z podzialem kluczowym na uzytkownikow w systemie
+
+USERS
+  *
+  ***** uzytkownik1 
+  *         *
+            ******* Mail
+	    		*
+			******** WLM
+			******** Outlook
+			******** Thunderbird
+	    ******* Browsers
+			*
+			******** IE
+			******** Firefox
+			******** Chrome
+	    ******* Comunicators
+			*
+			******** Skype
+			******** GG
+			******** IM
+			******** ICQ
+	    ******** usuniete / odzyskane 
+  *
+  ***** uzytkownik2 - analogicznie
+
+3. Kolejnosc wykonywania skryptow
+	1. utworz_katalog_glowny
+	2. zamontuj_patycje
+
+
+4. Bugi
+	
+
+5. Kolejnosc uruchamiania skryptow.
+a) zamontuj partycje - montuje partycje windows
+b) utworz_katalog_glowny - tworzy katalog glowny badania i podkatalogi. 
+c) wyszukaj_dysk_systemowy - wyszukuje dysk systemowy
+d) wyszukaj uzytkownikow systemu - zapisuje uzytkownikow windows z katalogu Users
