@@ -4,23 +4,23 @@
 #autor: Adam Borys
 #license: GNU
 
-#ver. 0.33
+#ver. 0.56
 
 
-NAZWA_PROGRAMU="Detective Windows 0.3"
+NAZWA_PROGRAMU="Detective Windows 0.56"
 IKONA=~/DW/main/graf/DooFi_detective64.png
 PLIK_LICENCJA="welcome.txt"
 
-function log() {
-	echo $1 >> ${MIEJSCE_ZAPISU}/log.txt 
+log() {
+	echo $1 >> ${MIEJSCE_ZAPISU}/log.txt && echo $1
 }
 
-function TIM() {
+TM() {
 	#czas z nanosekundami
-	echo `date "+%y-%m-%d %H:%M:%S.%N"`
+	echo `date "+%H:%M:%S.%N"`
 }
 
-function zamontuj_partycje() {
+zamontuj_partycje() {
 	#wyszukuje wszystkie dyski i partycje win i przypisuje do zmiennnej
 	PARTYCJE=$(sudo fdisk -l | 
 	#wyszykuje tylko te windosowe 
@@ -30,7 +30,13 @@ function zamontuj_partycje() {
 	#selekcjonuje np. z /dev/sda1 drugi czlon - sda1
 	cut -d / -f 3)
 
-	[ "$PARTYCJE" == "" ] && { yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="<b>This computer has no NTFS / FAT disks or I van NOT find it ! Program finished</b>"; exit; }
+	
+	[ "$PARTYCJE" == "" ] && { 
+		TXT="$(TM) - This computer has no NTFS / FAT disks or I van NOT find it ! Program finished"
+		yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="<b>${TXT}</b>"
+		echo $TXT 
+		exit 
+	}
 
 	for PARTYCJA_DO_ZAMONTOWANIA in $PARTYCJE
 	do
@@ -52,51 +58,93 @@ function zamontuj_partycje() {
 	echo  $PARTYCJE
 }
 
-function wyszukaj_partycje_systemowa_win()
-{
-	PLIK="${MIEJSCE_ZAPISU}/system_info/partitions_system_win"
+wyszukaj_partycje_systemowa_win() {
 
+	#wyszukuje z wszystkich partycji win partycje systemowe
 	for PARTYCJA in `cat ${MIEJSCE_ZAPISU}/system_info/partitions_win`
 	do
 		#sprawdzamy czy to nie przypadkowy katalog, sprawdzajac katalogi domyslne windows czy istnieja
 		if [ -d /media/${PARTYCJA}/Users/Public/Desktop ] && [ -d /media/${PARTYCJA}/Users/Default/AppData ]
 			then
 				echo $PARTYCJA >> $MIEJSCE_ZAPISU/system_info/partitions_system_win
-				log "5) $(TIM) - Disk with Windows system found on disk: ${PARTYCJA}. OK"	
+				log "5) $(TM) - I found system Windows on disk: ${PARTYCJA}. OK"	
 		fi
 	done
 
 	#sprawdzamy czy wogole znaleziono jakies dyski systemowe.
-	#czyli czy plik istnieje i czy nie jest pusty. W innym przypadku koniec
-	[ -e $PLIK -a -s $PLIK ] && return 0 || { yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="This computer has NOT disks with operating system Windows or I can NOT find it. Program finished !"; exit; }
+	#jesli plik nie istnieje lub jest pusty to koniec
+	PLIK="${MIEJSCE_ZAPISU}/system_info/partitions_system_win"
+	[ ! -e $PLIK -a ! -s $PLIK ] && { TXT="$(TM) - This computer has NOT disks with operating system Windows or I can NOT find it. Program finished !"; yad --title="${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text=$TXT; log $TXT; exit; }
 }
 
+wyszukaj_konta_uzytkownikow() {
+	#skrypt wyszukuje konta uzytkownikow systemu windows 7 / Vista w katalogu Users
+
+	for PARTYCJA in `cat ${MIEJSCE_ZAPISU}/system_info/partitions_system_win`
+	do
+		#wyswietla wszystkich uzytkownikow systemu z katalogu Users
+			#wyszukuje tylko katalogi (pierwszy znak z wiersza na litere d - directory)
+				#pobiera 9 kolumne ktora jest nazwa katalogu okreslajaca nazwe uzytkownika np. admin uzer Public
+		UZYTKOWNICY=$( ls -l /media/${PARTYCJA}/Users | grep ^d | cut -d ' ' -f 9 )
+
+		for uzytkownik in $UZYTKOWNICY
+		do
+			#wyklucza stale katalogi Default i Public . Pozostale to uzytkownicy systemu. Zapisuje w formacie np. sda1:uzytkownik
+			if [[ $uzytkownik != "Default" && $uzytkownik != "Public" ]]; then 
+				echo "${PARTYCJA}:${uzytkownik}" >> ${MIEJSCE_ZAPISU}/system_info/win_users && log "6) $(TM) - I found User's name acount (${uzytkownik}) on ${PARTYCJA} and saved it. OK" || log "I coudn NOT save file: win_users. ERROR."
+			fi
+		done
+		
+	done
+		#wyklucza stale katalogi Default i Public i wyswietla tylo 9 kolumne z wiersza z nazwa katalogu. Ta nazwa katalogu okresla uzytkownika systemu.
+		#awk '($9 !="Default") && ($9 !="Public") { print $9 }' > ${MIEJSCE_ZAPISU}/system_info/win_users && log "6) $(TM) I found User's name acounts on ${PARTYCJA} and saved it. OK" || log "I coudn NOT find User's name acounts on ${PARTYCJA}"
+	
+	#jesli plik nie istnieje lub jest pusty koniec programu
+	PLIK=${MIEJSCE_ZAPISU}/system_info/win_users
+	[ ! -e "${PLIK}" -o ! -s "${PLIK}" ] && { TXT="No Windows users acounts on checked disks. Program finished"; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="<b>${TXT}</b>"; log $TXT; exit; }
+}
+
+
+
+# START program
+
+
+echo "$(date "+%y-%m-%d %H:%M:%S") - Start program ${NAZWA_PROGRAMU}"
+
 #gui startowe - akceptacja warunkow licencji 
-zenity --text-info --title="Detective Windows" --filename=$PLIK_LICENCJA --html --checkbox="I read and accept the terms."
+zenity --text-info --title=${NAZWA_PROGRAMU} --filename=$PLIK_LICENCJA --html --checkbox="I read and accept the terms."
+
+echo "$(TM) GUI - Read and accept the terms"
 
 case $? in
     0)
-        echo "Accept licence and start program"
+        echo "(TM) GUI - Accept licence"
 	;;
     1)
-        echo "NOT accept licences and stop program"
+        echo "(TM) GUI - NOT accept licences and stop program"
 	exit
 	;;
     -1)
-	echo "NOT accept licences and stop program"
+	echo "(TM) GUI - NOT accept licences and stop program"
         yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="Some unexpected error. Program finished !"
 	exit
 	;;
 esac
 
+echo "$(TM) I mount NTFS disks"
+
 #zwraca zamontowane partycje windows w formacie np. sda1 sda3
 PARTYCJE=$(zamontuj_partycje)
+
+echo "$(TM) I mounted disk ${PARTYCJE}"
 
 #gui - podaj nazwe badania
 NAZWA_SPRAWY=$(yad --title="$NAZWA_PROGRAMU" --image=$IKONA --text="<b>  Insert name of case</b>" --form --field="Name of case" "First case")
 
+echo "$(TM) GUI - User inserted in GUI name of case: ${NAZWA_SPRAWY}"
+
 #gdy pole jest puste to koniec programu
-[ "$NAZWA_SPRAWY" == "" ] && exit
+[ "$NAZWA_SPRAWY" == "" ] && { echo "$(TM) GUI - Name of case inserted in GUI is empty. Finished program"; exit;  }
 
 #usowamy separator | dodany na koncu przez yad
 NAZWA_SPRAWY=$(echo $NAZWA_SPRAWY | tr -d "|" )
@@ -113,38 +161,51 @@ KATALOG_SPRAWY=${NAZWA_SPRAWY}_${CZAS_UTWORZENIA}
 #gui - podaj na jakim nosniku/katalogu zapisac badanie
 MIEJSCE_ZAPISU=$(yad --file --directory --title="$NAZWA_PROGRAMU" --image=$IKONA --text="<b>  Where to save result ?</b>" --height=380)
 
+echo "$(TM) GUI - Inserted in GUI place to save result: ${MIEJSCE_ZAPISU}"
+
 #gdy pole jest puste to koniec programu
-[ "$MIEJSCE_ZAPISU" == "" ] && exit
+[ "$MIEJSCE_ZAPISU" == "" ] && { echo "$(TM) GUI - Inserted in GUI place to save result is empty. Finished program"; exit; }
 
 #bardzo wazna zmienna. Wszstekie skrypty beda odnosic sie do tego katalogu
 #katalog glownym staje sie katalog sprawy
 MIEJSCE_ZAPISU="${MIEJSCE_ZAPISU}/${KATALOG_SPRAWY}"
 
+echo "$(TM) Destination folder to save all results: ${MIEJSCE_ZAPISU}"
+
 #tworzy glowne katalogi z podkatalogami
 mkdir -p "${MIEJSCE_ZAPISU}/system_info" && mkdir "${MIEJSCE_ZAPISU}/Users" 
+
 #sprawdzamy czy katalogi zostaly utworzone poprawnie 
 if [ -d "${MIEJSCE_ZAPISU}/Users" -a -d "${MIEJSCE_ZAPISU}/system_info" ]; then
-	log 
-	log "2) $(TIM) - Main folders created correct in ${MIEJSCE_ZAPISU}. OK" 
+	log "2) $(TM) - Main folders created correct in ${MIEJSCE_ZAPISU}. OK" 
 else
-	yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="Main folders NOT created correct in ${MIEJSCE_ZAPISU}. Error. Program finished"
+	TXT="Main folders NOT created correct in ${MIEJSCE_ZAPISU}. Error. Program finished"
+	yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text=$TXT
+	log "2) $(TM) ${TXT}"
 	exit 
 fi
 
 #zapisujemy plik z sciezka do katalogu, gdzie beda zapisywane wszystkie wyniki dzialan programu
-log "3) $(TIM) - I try to save file -> global_path"
-echo $MIEJSCE_ZAPISU > "${MIEJSCE_ZAPISU}/system_info/global_path" && log "3) $(TIM) - I saved file global_path correct. OK"
+log "3) $(TM) - I try to save file -> global_path"
+echo $MIEJSCE_ZAPISU > "${MIEJSCE_ZAPISU}/system_info/global_path" && log "3) $(TM) - I saved file global_path correct. OK"
 
 #zapisujemy plik z informacja o wszystkich partycjach windowsowych w komputerze 
-log "4) $(TIM) - I try to save file -> partitions_win"
-echo $PARTYCJE > "${MIEJSCE_ZAPISU}/system_info/partitions_win" && log "4) $(TIM) - I saved file partitions_win correct. OK"
+log "4) $(TM) - I try to save file -> partitions_win"
+echo $PARTYCJE > "${MIEJSCE_ZAPISU}/system_info/partitions_win" && log "4) $(TM) - I saved file partitions_win correct. OK"
 
 #wyszukujemy i zapisujemy plik z informacja o partycjach z systemem win, a dokladnie z katalogiem Users
-log "5) $(TIM) - I look for partitions with Windows system."
+log "5) $(TM) - I look for partitions with Windows system."
 wyszukaj_partycje_systemowa_win
 
-#gui - wybieramy uzytkownikow systemu ktorych chcemy poddac badaniu
+#wyszukuje konta uzytkownikow w katalogu Users
+log "6) $(TM) - I look for User's acounts on Windows system"
+wyszukaj_konta_uzytkownikow
+UZYTKOWNICY=`cat ${MIEJSCE_ZAPISU}/system_info/win_users`
 
+#wyszukuje klienty pocztowe
+
+#gui - wybor konta do przeszukania
+#./dewin_select $PARTYCJE_SYSTEMOWE $UZYTKOWNICY
 
 
 

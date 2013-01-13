@@ -1,0 +1,23 @@
+#!/bin/bash
+
+#PARTYCJE=$1
+#UZYTKOWNICY=$2
+
+MIEJSCE_ZAPISU=~/DW2/adam_130113_174911
+
+PARTYCJE=`cat $MIEJSCE_ZAPISU/system_info/partitions_system_win`
+
+UZYTKOWNICY=`cat ${MIEJSCE_ZAPISU}/system_info/win_users`
+echo $UZYTKOWNICY
+
+DYSK=`echo $UZYTKOWNICY | awk -F":" '{ print $1 }'`
+
+echo $DYSK
+UZYTKOWNIK=`echo $UZYTKOWNICY | awk -F":" '{ print $2 }'`
+echo $UZYTKOWNIK
+
+echo "$DYSK --- $UZYTKOWNIK"
+
+yad --list --checklist --title="tytul" --text="What User's data acount do you want to copy ?" --width 300 --height 300 --column "" --column "ACOUNT" $(for konto in $UZYTKOWNICY; do echo FALSE $konto; done)
+
+

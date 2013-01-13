@@ -1,1 +1,29 @@
-x
+#!/bin/bash -x
+
+MIEJSCE_ZAPISU=~/DW2/adam_130113_174911
+
+KONTA="$MIEJSCE_ZAPISU/system_info/partitions_system_win"
+
+echo "konta: $KONTA"
+
+#yad --list --checklist --title="tytul" --text="What User's acount do you want to infiltrate ?" --width 300 --height 300 --column "" --column "ACOUNT" $(for konto in $(cat $KONTA); do echo FALSE $konto; done)
+
+
+	for PARTYCJA in `cat ${MIEJSCE_ZAPISU}/system_info/partitions_system_win`
+	do
+		#wyswietla wszystkich uzytkownikow systemu z katalogu Users
+			#wyszukuje tylko katalogi (pierwszy znak z wiersza na litere d - directory)
+				#pobiera 9 kolumne ktora jest nazwa katalogu okreslajaca nazwe uzytkownika np. admin uzer Public
+		UZYTKOWNICY=$( ls -l /media/${PARTYCJA}/Users | grep ^d | cut -d ' ' -f 9 )
+
+		for uzytkownik in $UZYTKOWNICY
+		do
+			#wyklucza stale katalogi Default i Public . Pozostale to uzytkownicy systemu
+			if [[ $uzytkownik != "Default" && $uzytkownik != "Public" ]]; then 
+				echo "${PARTYCJA}:${uzytkownik}" >> ${MIEJSCE_ZAPISU}/system_info/win_users && log "6) $(TM) I found User's name acount (${uzytkownik}) on ${PARTYCJA} and saved it. OK" || log "I coudn NOT save file: win_users. ERROR."
+			fi
+		done
+		
+	done
+PLIK=${MIEJSCE_ZAPISU}/system_info/test
+[ ! -e "${PLIK}" -o ! -s "${PLIK}" ] && { TXT="No Windows system on checked disks. Program finished"; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="<b>${TXT}</b>"; log $TXT; exit; }
