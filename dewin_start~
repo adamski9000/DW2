@@ -90,8 +90,9 @@ wyszukaj_konta_uzytkownikow() {
 		for uzytkownik in $UZYTKOWNICY
 		do
 			#wyklucza stale katalogi Default i Public . Pozostale to uzytkownicy systemu. Zapisuje w formacie np. sda1:uzytkownik
-			if [[ $uzytkownik != "Default" && $uzytkownik != "Public" ]]; then 
-				echo "${PARTYCJA}:${uzytkownik}" >> ${MIEJSCE_ZAPISU}/system_info/win_users && log "6) $(TM) I found User's name acount (${uzytkownik}) on ${PARTYCJA} and saved it. OK" || log "I coudn NOT save file: win_users. ERROR."
+			if [[ $uzytkownik != "Default" ]] || [[ $uzytkownik != "Public" ]] || [[ $PARTYCJA != "" ]] || [[ $uzytkownik != "" ]]; 
+			then 
+				echo "${PARTYCJA}:${uzytkownik}" >> ${MIEJSCE_ZAPISU}/system_info/win_users && log "6) $(TM) - I found User's name acount (${uzytkownik}) on ${PARTYCJA} and saved it. OK" || log "I coudn NOT save file: win_users. ERROR."
 			fi
 		done
 		
@@ -104,6 +105,15 @@ wyszukaj_konta_uzytkownikow() {
 	[ ! -e "${PLIK}" -o ! -s "${PLIK}" ] && { TXT="No Windows users acounts on checked disks. Program finished"; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="<b>${TXT}</b>"; log $TXT; exit; }
 }
 
+wyswietl_w_gui_uzytkownika_i_dysk() {
+	#rozdzielamy sciezke np. sda1:uzytkownik na skladowe i wyswietlamy uzytkownika i dysk 
+	while read SCIEZKA
+	do
+		DYSK=`echo $SCIEZKA | cut -d ':' -f1`
+		UZYTKOWNIK=`echo $SCIEZKA | cut -d ':' -f2`
+		echo "TRUE $UZYTKOWNIK $DYSK"
+	done < ${MIEJSCE_ZAPISU}/system_info/win_users
+}
 
 
 # START program
@@ -200,12 +210,25 @@ wyszukaj_partycje_systemowa_win
 #wyszukuje konta uzytkownikow w katalogu Users
 log "6) $(TM) - I look for User's acounts on Windows system"
 wyszukaj_konta_uzytkownikow
-UZYTKOWNICY=`cat ${MIEJSCE_ZAPISU}/system_info/win_users`
 
-#wyszukuje klienty pocztowe
 
-#gui - wybor konta do przeszukania
-#./dewin_select $PARTYCJE_SYSTEMOWE $UZYTKOWNICY
+#gui - wyswietla dialog z wyborem kont uzytkownikow  
+log "7) $(TM) - I select in GUI users names acounts"
+WYBRANI_UZYTKOWNICY=$(yad --list --checklist --title="$NAZWA_PROGRAMU" --text="I found User's data acount on this computer. What User's data acount do you want to copy ?" --width 300 --height 300 --button="gtk-ok:0" --column "" --column "ACOUNT" --column "DISK" $(wyswietl_w_gui_uzytkownika_i_dysk))
+#sprawdza czy wybrano cokolwiek
+[[ "$WYBRANI_UZYTKOWNICY" != "" ]] && log "7) $(TM) - I selected users names acounts ${WYBRANI_UZYTKOWNICY}" || { TXT= "7) $(TM) No selected users names acounts. Finish program"; log $TXT; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="${TXT}"; exit; }
+
+#WYBRANI_UZYTKOWNICY=TRUE|admin|sda1 TRUE|uzytkownik2|sda1
+# oddzielamy wybrane konta od siebie przez spacje
+for CZLON in `echo $WYBRANI_UZYTKOWNICY | awk -F" " '{ print }'`
+do
+	#wybieramy druga kolumne ktora okresla nazwe uzytkownika
+	for UZYTKOWNIK in `echo $CZLON | cut -d '|' -f2`
+	do
+		echo $UZYTKOWNIK
+	done
+done
+
 
 
 

@@ -3,7 +3,7 @@
 #format wywolania skryptu: wyszukaj_poczte uzytkowniksystemu klient_poczty. Np. wyszukaj_poczte admin WLM
 #wyszukuje poczte na kazdym koncie uzytkownika
 
-MIEJSCE_ZAPISU=`cat `
+KATALOG_GLOWNY=/home/adam/DW/badanie
 
 #zabezpieczenie. Jesli za malo parametrow koniec skryptu
 [[ "$#" != 2  ]] && echo "No enough parameters"  && log "Script started without enough parameters. Error" && exit
@@ -46,7 +46,7 @@ else
 fi
 
 
-for PARTYCJA in `cat ${KATALOG_GLOWNY}/system_info/partycja_systemowa_windows.txt`
+for PARTYCJA in `cat ${KATALOG_GLOWNY}/system_info/paritions_system_win`
    do
 
 	log "$DATA - I am looking for ${KLIENT_POCZTY} folders on ${PARTYCJA}..."

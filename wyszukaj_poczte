@@ -5,14 +5,12 @@
 
 KATALOG_GLOWNY=/home/adam/DW/badanie
 
-#zabezpieczenie. Jesli za malo parametrow koniec skryptu
-[[ "$#" != 2  ]] && echo "No enough parameters"  && log "Script started without enough parameters. Error" && exit
-
-function log()
-{
-	#funkcja zapisuje loga
-	echo $1 >> ${KATALOG_GLOWNY}/log.txt 
+log() {
+	echo $1 >> ${MIEJSCE_ZAPISU}/log.txt && echo $1
 }
+
+#zabezpieczenie. Jesli za malo parametrow koniec skryptu
+[[ "$#" != 2  ]] && && log "Script started without enough parameters. Error" && exit
 
 UZYTKOWNIK=$1
 KLIENT_POCZTY=$2
@@ -46,7 +44,7 @@ else
 fi
 
 
-for PARTYCJA in `cat ${KATALOG_GLOWNY}/system_info/partycja_systemowa_windows.txt`
+for PARTYCJA in `cat ${KATALOG_GLOWNY}/system_info/paritions_system_win`
    do
 
 	log "$DATA - I am looking for ${KLIENT_POCZTY} folders on ${PARTYCJA}..."

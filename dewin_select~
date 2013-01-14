@@ -7,17 +7,52 @@ MIEJSCE_ZAPISU=~/DW2/adam_130113_174911
 
 PARTYCJE=`cat $MIEJSCE_ZAPISU/system_info/partitions_system_win`
 
-UZYTKOWNICY=`cat ${MIEJSCE_ZAPISU}/system_info/win_users`
-echo $UZYTKOWNICY
+log() {
+	echo $1 >> ${MIEJSCE_ZAPISU}/log.txt && echo $1
+}
 
-DYSK=`echo $UZYTKOWNICY | awk -F":" '{ print $1 }'`
+TM() {
+	#czas z nanosekundami
+	echo `date "+%H:%M:%S.%N"`
+}
 
-echo $DYSK
-UZYTKOWNIK=`echo $UZYTKOWNICY | awk -F":" '{ print $2 }'`
-echo $UZYTKOWNIK
+wyswietl_w_gui_uzytkownika_i_dysk() {
+	#rozdzielamy sciezke np. sda1:uzytkownik na skladowe i wyswietlamy uzytkownika i dysk 
+	while read SCIEZKA
+	do
+		DYSK=`echo $SCIEZKA | cut -d ':' -f1`
+		UZYTKOWNIK=`echo $SCIEZKA | cut -d ':' -f2`
+		echo "TRUE $UZYTKOWNIK $DYSK"
+	done < ${MIEJSCE_ZAPISU}/system_info/win_users
+}
 
-echo "$DYSK --- $UZYTKOWNIK"
+WYBRANI_UZYTKOWNICY=$(yad --list --checklist --title="tytul" --text="What User's data acount do you want to copy ?" --width 300 --height 300 --button="gtk-ok:0" --column "" --column "ACOUNT" --column "DISK" $(wyswietl_w_gui_uzytkownika_i_dysk) )
+#na wyjsciu np. WYBRANI_UZYTKOWNICY=TRUE|admin|sda1 TRUE|uzytkownik2|sda1
+echo $WYBRANI_UZYTKOWNICY
 
-yad --list --checklist --title="tytul" --text="What User's data acount do you want to copy ?" --width 300 --height 300 --column "" --column "ACOUNT" $(for konto in $UZYTKOWNICY; do echo FALSE $konto; done)
+# oddzielamy wybrane konta od siebie przez spacje
+for CZLON in `echo $WYBRANI_UZYTKOWNICY | awk -F" " '{ print }'`
+do
+	#wybieramy druga kolumne ktora okresla nazwe uzytkownika
+	for UZYTKOWNIK in `echo $CZLON | cut -d '|' -f2`
+	do
+		for KLIENT in "Outlook WLM Thunderbird"
+		do 
+			echo $UZYTKOWNIK - $KLIENT
+		done
+	done
+done
+
+#echo $UZYTKOWNICY
+
+#DYSK=`echo $UZYTKOWNICY | awk -F" " '{ print $1 }'`
+#DYSK=`echo $DYSK | awk -F":" '{ print $1 }'`
+#echo $DYSK
+#UZYTKOWNIK=`echo $UZYTKOWNICY | awk -F" " '{ print $2 }'`
+
+#UZYTKOWNIK=`echo $UZYTKOWNICY | awk -F":" '{ print $2 }'`
+#echo $UZYTKOWNIK
+
+#yad --list --checklist --title="tytul" --text="What User's data acount do you want to copy ?" --width 300 --height 300 --column "" --column "ACOUNT" $(for konto in $UZYTKOWNICY; do echo FALSE $konto; done)
 
 
