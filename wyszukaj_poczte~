@@ -3,28 +3,36 @@
 #format wywolania skryptu: wyszukaj_poczte uzytkowniksystemu klient_poczty. Np. wyszukaj_poczte admin WLM
 #wyszukuje poczte na kazdym koncie uzytkownika
 
-KATALOG_GLOWNY=/home/adam/DW/badanie
+log() { echo $1 >> ${MIEJSCE_ZAPISU}/log.txt && echo $1; }
+
+TM() { echo `date "+%H:%M:%S"`; }
 
 #zabezpieczenie. Jesli za malo parametrow koniec skryptu
-[[ "$#" != 2  ]] && echo "No enough parameters"  && log "Script started without enough parameters. Error" && exit
+[[ "$#" != 2  ]] && { log "$(TM) - Script started without enough parameters( $1, $2 ). Error"; exit; } || log "$(TM) Script ran with parameters: $1 , $2 correct " 
 
-function log()
-{
-	#funkcja zapisuje loga
-	echo $1 >> ${KATALOG_GLOWNY}/log.txt 
-}
+# oddzielamy wybrane konta od siebie spacją; np WYBRANI_UZYTKOWNICY=TRUE|admin|sda1 TRUE|uzytkownik2|sda1
+for UZYTKOWNIK0 in `echo $WYBRANI_UZYTKOWNICY | awk -F" " '{ print }'`
+do
+	# oddzielamy wybrane konta od siebie | np na wyjsciu UZYTKOWNIK2=TRUE|admin|sda1
+	for UZYTKOWNIK in `echo $UZYTKOWNIK0 | cut -d '|' -f2`
+	do
+		for KLIENT_POCZTY in Outlook WLM Thunderbird
+		do 
+			log "8) $(TM) I preaper to run script to search email client ${KLIENT_POCZTY} for user ${UZYTKOWNIK}"
+			./wyszukaj_poczte $UZYTKOWNIK2 $KLIENT_POCZTY $MIEJSCE_ZAPISU
+		done
+	done
+done
 
 UZYTKOWNIK=$1
 KLIENT_POCZTY=$2
+MIEJSCE_ZAPISU=$3
 
-DATA=`date "+%y-%m-%d %H:%M:%S"`
 
-log "$DATA - Im preapereing to find email clients." 
 
+log "$(TM) - I try to create folders for email clients." 
 #tworzy katalogi z podkatalogami jesli nie ma
-mkdir -p ${KATALOG_GLOWNY}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY} && 
-log "- ${KLIENT_POCZTY} Mail folders on destination drive correct. OK" || 
-log " I coud NOT create ${KLIENT_POCZTY} Mail folders on destination drive. Error." 
+mkdir -p ${MIEJSCE_ZAPISU}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY} && log "$(TM) - ${KLIENT_POCZTY} Mail folders on destination drive correct. OK" || { log "$(TM) I coud NOT create ${KLIENT_POCZTY} Mail folders on destination drive. Program finished. Error. "; exit; } 
 
 
 if [[ "$KLIENT_POCZTY" == "Outlook" ]]; then
@@ -40,29 +48,29 @@ elif [[ "$KLIENT_POCZTY" == "Thunderbird" ]]; then
 	SCIEZKA_DO_KATALOGU_KLIENTA="AppData/Roaming/Thunderbird/Profiles"
 	SCIEZKA_DO_PLIKOW="AppData/Roaming/Thunderbird/Profiles"
 	#w tych katalogach jest cala poczta kont imap i pop3	
-	CZEGO_SZUKAMY="-type d -name ImapMail -o -iname Mail"
+	CZEGO_SZUKAMY="-type d -name ImapMail -o -name Mail"
 else
 	exit
 fi
 
 
-for PARTYCJA in `cat ${KATALOG_GLOWNY}/system_info/paritions_system_win`
+for PARTYCJA in `cat ${MIEJSCE_ZAPISU}/system_info/partitions_system_win`
    do
 
-	log "$DATA - I am looking for ${KLIENT_POCZTY} folders on ${PARTYCJA}..."
+	log "$(TM) - I am looking for ${KLIENT_POCZTY} folders on ${PARTYCJA}"
 
 	#sprawdzamy czy katalog istnieje
 	if [ -d  "/media/${PARTYCJA}/Users/${UZYTKOWNIK}/${SCIEZKA_DO_KATALOGU_KLIENTA}" ];
 	  then
 
-		log "- I found ${KLIENT_POCZTY} folder in ${SCIEZKA_DO_KATALOGU_KLIENTA}"
+		log "$(TM) - I found ${KLIENT_POCZTY} folder in ${SCIEZKA_DO_KATALOGU_KLIENTA}"
 		
 		KOMENDA="find /media/${PARTYCJA}/Users/${UZYTKOWNIK}/${SCIEZKA_DO_PLIKOW} ${CZEGO_SZUKAMY}"
 		#musimy zastosowac eval gdyz bez tego wyszukiwanie katalogowu ze spacjami wywala bledy
-		eval $KOMENDA > ${KATALOG_GLOWNY}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY}/tocopy_${KLIENT_POCZTY}.txt && log "- I found and saved link to ${KLIENT_POCZTY} archives " || log "- I did not find archives in ${KLIENT_POCZTY}"
+		eval $KOMENDA > ${MIEJSCE_ZAPISU}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY}/tocopy_${KLIENT_POCZTY}.txt && log "$(TM) - I found and saved link to ${KLIENT_POCZTY} archives " || log "$(TM) - I did not find archives in ${KLIENT_POCZTY}"
 
  	else 
-		log "- I did not find ${KLIENT_POCZTY} folder in ${SCIEZKA_DO_KATALOGU_KLIENTA}"
+		log "$(TM) - I did not find ${KLIENT_POCZTY} folder in ${SCIEZKA_DO_KATALOGU_KLIENTA}"
 	fi
 
 done

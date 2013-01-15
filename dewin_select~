@@ -3,7 +3,7 @@
 #PARTYCJE=$1
 #UZYTKOWNICY=$2
 
-MIEJSCE_ZAPISU=~/DW2/adam_130113_174911
+MIEJSCE_ZAPISU=~/DW2/adi_130115_174519
 
 PARTYCJE=`cat $MIEJSCE_ZAPISU/system_info/partitions_system_win`
 
@@ -30,15 +30,17 @@ WYBRANI_UZYTKOWNICY=$(yad --list --checklist --title="tytul" --text="What User's
 #na wyjsciu np. WYBRANI_UZYTKOWNICY=TRUE|admin|sda1 TRUE|uzytkownik2|sda1
 echo $WYBRANI_UZYTKOWNICY
 
-# oddzielamy wybrane konta od siebie przez spacje
-for CZLON in `echo $WYBRANI_UZYTKOWNICY | awk -F" " '{ print }'`
+# oddzielamy wybrane konta od siebie spacją; np na wyjsciu WYBRANI_UZYTKOWNICY=TRUE|admin|sda1 TRUE|uzytkownik2|sda1
+for UZYTKOWNIK in `echo $WYBRANI_UZYTKOWNICY | awk -F" " '{ print }'`
 do
-	#wybieramy druga kolumne ktora okresla nazwe uzytkownika
-	for UZYTKOWNIK in `echo $CZLON | cut -d '|' -f2`
+	# oddzielamy wybrane konta od siebie | np na wyjsciu UZYTKOWNIK2=TRUE|admin|sda1
+	for UZYTKOWNIK2 in `echo $UZYTKOWNIK | cut -d '|' -f2`
 	do
-		for KLIENT in "Outlook WLM Thunderbird"
+		for KLIENT_POCZTY in Outlook WLM Thunderbird
 		do 
-			echo $UZYTKOWNIK - $KLIENT
+			log "8) $(TM) I preaper to run script to search email client ${KLIENT_POCZTY} for user ${UZYTKOWNIK2}. Folder $MIEJSCE_ZAPISU"
+			#wyszukaj_poczte $UZYTKOWNIK2 $KLIENT_POCZTY $MIEJSCE_ZAPISU
+			./test3
 		done
 	done
 done

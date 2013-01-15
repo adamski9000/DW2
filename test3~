@@ -4,3 +4,7 @@ MIEJSCE_ZAPISU=~/DW2/adam_130113_174911
 
 grep sd ${MIEJSCE_ZAPISU}/system_info/win_users 
 
+UZYTKOWNICY=$( ls -l /media/${PARTYCJA}/Users | grep ^d | cut -d ' ' -f 9 )
+
+echo $UZYTKOWNICY
+
