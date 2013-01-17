@@ -100,16 +100,6 @@ wyszukaj_konta_uzytkownikow() {
 	[ ! -e "${PLIK}" -o ! -s "${PLIK}" ] && { TXT="No Windows users acounts on checked disks. Program finished"; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="<b>${TXT}</b>"; log $TXT; exit; }
 }
 
-wyswietl_w_gui_uzytkownika_i_dysk() {
-	#rozdzielamy sciezke np. sda1:uzytkownik na skladowe i wyswietlamy uzytkownika i dysk 
-	while read SCIEZKA
-	do
-		DYSK=`echo $SCIEZKA | cut -d ':' -f1`
-		UZYTKOWNIK=`echo $SCIEZKA | cut -d ':' -f2`
-		echo "TRUE $UZYTKOWNIK $DYSK"
-	done < ${MIEJSCE_ZAPISU}/system_info/win_users
-}
-
 
 # START program
 
@@ -206,29 +196,11 @@ wyszukaj_partycje_systemowa_win
 log "6) $(TM) - I look for User's acounts on Windows system"
 wyszukaj_konta_uzytkownikow
 
-#gui - wyswietla dialog z wyborem kont uzytkownikow  
-log "7) $(TM) - I select in GUI users names acounts"
-WYBRANI_UZYTKOWNICY=$(yad --list --checklist --title="$NAZWA_PROGRAMU" --text="I found User's data acount on this computer. What User's data acount do you want to copy ?" --width 300 --height 300 --button="gtk-ok:0" --column "" --column "ACOUNT" --column "DISK" $(wyswietl_w_gui_uzytkownika_i_dysk))
-#sprawdza czy wybrano cokolwiek, na wyjsciu WYBRANI_UZYTKOWNICY=TRUE|admin|sda1 TRUE|uzytkownik2|sda1
-[[ "$WYBRANI_UZYTKOWNICY" != "" ]] && log "7) $(TM) - I selected users names acounts ${WYBRANI_UZYTKOWNICY}" || { TXT= "7) $(TM) No selected users names acounts. Finish program"; log $TXT; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="${TXT}"; exit; }
-#na wyjsciu np WYBRANI_UZYTKOWNICY=TRUE|admin|sda1 TRUE|uzytkownik2|sda1
+#wczytuje plik do wyboru opcji
+log "7) $(TM) - I try to run script with select options: dewin_select"
+./dewin_select "$MIEJSCE_ZAPISU"
 
-#wczytuje plik do obslugi poczty
-./wyszukaj_poczte "$WYBRANI_UZYTKOWNICY" "$MIEJSCE_ZAPISU"
 
-# oddzielamy wybrane konta od siebie spacją; np na wyjsciu WYBRANI_UZYTKOWNICY=TRUE|admin|sda1 TRUE|uzytkownik2|sda1
-for UZYTKOWNIK in `echo $WYBRANI_UZYTKOWNICY | awk -F" " '{ print }'`
-do
-	# oddzielamy wybrane konta od siebie | np na wyjsciu UZYTKOWNIK2=TRUE|admin|sda1
-	for UZYTKOWNIK2 in `echo $UZYTKOWNIK | cut -d '|' -f2`
-	do
-		for KLIENT_POCZTY in Outlook WLM Thunderbird
-		do 
-			log "8) $(TM) I preaper to run script to search email client ${KLIENT_POCZTY} for user ${UZYTKOWNIK2}"
-			./wyszukaj_poczte $UZYTKOWNIK2 $KLIENT_POCZTY $MIEJSCE_ZAPISU
-		done
-	done
-done
 
 
 

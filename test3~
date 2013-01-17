@@ -1,10 +1,15 @@
 #!/bin/bash -x
 
-MIEJSCE_ZAPISU=~/DW2/adam_130113_174911
+test()
+{
+	echo "func test3"
+}
 
-grep sd ${MIEJSCE_ZAPISU}/system_info/win_users 
+./test2
 
-UZYTKOWNICY=$( ls -l /media/${PARTYCJA}/Users | grep ^d | cut -d ' ' -f 9 )
+test
 
-echo $UZYTKOWNICY
+z="ZZZZZZZZZ"
+
+log $z
 

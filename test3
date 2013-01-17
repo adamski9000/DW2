@@ -1,4 +1,15 @@
 #!/bin/bash -x
 
-echo "OK"
+test()
+{
+	echo "func test3"
+}
+
+source ./test2
+
+test
+
+z="ZZZZZZZZZ"
+
+log $z
 

@@ -8,7 +8,10 @@ log() { echo $1 >> ${MIEJSCE_ZAPISU}/log.txt && echo $1; }
 TM() { echo `date "+%H:%M:%S"`; }
 
 #zabezpieczenie. Jesli za malo parametrow koniec skryptu
-[[ "$#" != 2  ]] && { log "$(TM) - Script started without enough parameters( $1, $2 ). Error"; exit; } || log "$(TM) Script ran with parameters: $1 , $2 correct " 
+[[ "$#" != 2  ]] && { echo "11a) $(TM) - Script started without enough parameters( $1, $2 ). Error"; exit; } || log "11a1) $(TM) Script ran with parameters: $1 , $2 correct " 
+
+WYBRANI_UZYTKOWNICY=$1
+MIEJSCE_ZAPISU=$2
 
 # oddzielamy wybrane konta od siebie spacją; np WYBRANI_UZYTKOWNICY=TRUE|admin|sda1 TRUE|uzytkownik2|sda1
 for UZYTKOWNIK0 in `echo $WYBRANI_UZYTKOWNICY | awk -F" " '{ print }'`
@@ -16,62 +19,66 @@ do
 	# oddzielamy wybrane konta od siebie | np na wyjsciu UZYTKOWNIK2=TRUE|admin|sda1
 	for UZYTKOWNIK in `echo $UZYTKOWNIK0 | cut -d '|' -f2`
 	do
+		#po koleji sprawdzamy dla kadego z klientow
 		for KLIENT_POCZTY in Outlook WLM Thunderbird
 		do 
-			log "8) $(TM) I preaper to run script to search email client ${KLIENT_POCZTY} for user ${UZYTKOWNIK}"
-			./wyszukaj_poczte $UZYTKOWNIK2 $KLIENT_POCZTY $MIEJSCE_ZAPISU
+			log "11b) $(TM) I prepare to search email client ${KLIENT_POCZTY} for user ${UZYTKOWNIK}"
+			
+			if [[ "$KLIENT_POCZTY" == "Outlook" ]]; then
+				SCIEZKA_DO_KATALOGU_KLIENTA="AppData/Local/Microsoft/Outlook"
+				#pliki pst porozrzucane sa w roznych miejscach, takze w katalogu Documents dlatego szuka w calym katalogu uzytkownika
+				SCIEZKA_DO_PLIKOW=
+				CZEGO_SZUKAMY="-name *.pst"
+			elif [[ "$KLIENT_POCZTY" == "WLM" ]]; then
+				SCIEZKA_DO_KATALOGU_KLIENTA="AppData/Local/Microsoft/Windows Live Mail"
+				SCIEZKA_DO_PLIKOW="AppData/Local/Microsoft"
+				CZEGO_SZUKAMY="-type d -name Windows\ Live\ Mail"
+			elif [[ "$KLIENT_POCZTY" == "Thunderbird" ]]; then
+				SCIEZKA_DO_KATALOGU_KLIENTA="AppData/Roaming/Thunderbird/Profiles"
+				SCIEZKA_DO_PLIKOW="AppData/Roaming/Thunderbird/Profiles"
+				#w tych katalogach jest cala poczta kont imap i pop3	
+				CZEGO_SZUKAMY="-type d -name ImapMail -o -name Mail"
+			else
+				log "11b1) $(TM) - $KLIENT_POCZTY is not suported. Program exit. Error"; exit
+			fi
+
+			for PARTYCJA in `cat ${MIEJSCE_ZAPISU}/system_info/partitions_system_win`
+			   do
+				log "11c) $(TM) - I am looking for ${KLIENT_POCZTY} folders on ${PARTYCJA} in ${UZYTKOWNIK} profile"
+
+				#sprawdzamy czy katalog istnieje
+				if [ -d  "/media/${PARTYCJA}/Users/${UZYTKOWNIK}/${SCIEZKA_DO_KATALOGU_KLIENTA}" ];
+				  then
+
+					log "11d) $(TM) - I found ${KLIENT_POCZTY} folder in ${UZYTKOWNIK} profile"
+		
+					#tworzy katalogi z podkatalogami jesli nie ma
+					mkdir -p ${MIEJSCE_ZAPISU}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY} && log "11e) $(TM) - ${KLIENT_POCZTY} Mail folders on destination drive correct. OK" || { TXT="11e1) $(TM) I coud NOT create ${KLIENT_POCZTY} Mail folders on destination drive. Program finished. Error."; log $TXT; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="${TXT}"; exit; } 
+
+					KOMENDA="find /media/${PARTYCJA}/Users/${UZYTKOWNIK}/${SCIEZKA_DO_PLIKOW} ${CZEGO_SZUKAMY}"
+		
+					#musimy zastosowac eval gdyz bez tego wyszukiwanie katalogowu ze spacjami wywala bledy
+					eval $KOMENDA > ${MIEJSCE_ZAPISU}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY}/tocopy_${KLIENT_POCZTY} && log "11f) $(TM) - I found and saved link to ${KLIENT_POCZTY} archives in ${UZYTKOWNIK} profile" || log "11f1) $(TM) - I can NOT save file with ${KLIENT_POCZTY} archive for ${UZYTKOWNIK} profile. Error"
+
+			 	else 
+					log "11c1) $(TM) - I did not find ${KLIENT_POCZTY} folder in ${UZYTKOWNIK} profile"
+				fi
+			done
+
 		done
 	done
 done
 
-UZYTKOWNIK=$1
-KLIENT_POCZTY=$2
-MIEJSCE_ZAPISU=$3
+#musimy sprawdzic co znalazl i wybrac ktore klienty skopiowac
+#./dewin_select_client 
 
 
 
-log "$(TM) - I try to create folders for email clients." 
-#tworzy katalogi z podkatalogami jesli nie ma
-mkdir -p ${MIEJSCE_ZAPISU}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY} && log "$(TM) - ${KLIENT_POCZTY} Mail folders on destination drive correct. OK" || { log "$(TM) I coud NOT create ${KLIENT_POCZTY} Mail folders on destination drive. Program finished. Error. "; exit; } 
 
 
-if [[ "$KLIENT_POCZTY" == "Outlook" ]]; then
-	SCIEZKA_DO_KATALOGU_KLIENTA="AppData/Local/Microsoft/Outlook"
-	#pliki pst porozrzucane sa w roznych miejscach, takze w katalogu Documents dlatego szuka w calym katalogu uzytkownika
-	SCIEZKA_DO_PLIKOW=
-	CZEGO_SZUKAMY="-name *.pst"
-elif [[ "$KLIENT_POCZTY" == "WLM" ]]; then
-	SCIEZKA_DO_KATALOGU_KLIENTA="AppData/Local/Microsoft/Windows Live Mail"
-	SCIEZKA_DO_PLIKOW="AppData/Local/Microsoft"
-	CZEGO_SZUKAMY="-type d -name Windows\ Live\ Mail"
-elif [[ "$KLIENT_POCZTY" == "Thunderbird" ]]; then
-	SCIEZKA_DO_KATALOGU_KLIENTA="AppData/Roaming/Thunderbird/Profiles"
-	SCIEZKA_DO_PLIKOW="AppData/Roaming/Thunderbird/Profiles"
-	#w tych katalogach jest cala poczta kont imap i pop3	
-	CZEGO_SZUKAMY="-type d -name ImapMail -o -name Mail"
-else
-	exit
-fi
 
 
-for PARTYCJA in `cat ${MIEJSCE_ZAPISU}/system_info/partitions_system_win`
-   do
 
-	log "$(TM) - I am looking for ${KLIENT_POCZTY} folders on ${PARTYCJA}"
 
-	#sprawdzamy czy katalog istnieje
-	if [ -d  "/media/${PARTYCJA}/Users/${UZYTKOWNIK}/${SCIEZKA_DO_KATALOGU_KLIENTA}" ];
-	  then
 
-		log "$(TM) - I found ${KLIENT_POCZTY} folder in ${SCIEZKA_DO_KATALOGU_KLIENTA}"
-		
-		KOMENDA="find /media/${PARTYCJA}/Users/${UZYTKOWNIK}/${SCIEZKA_DO_PLIKOW} ${CZEGO_SZUKAMY}"
-		#musimy zastosowac eval gdyz bez tego wyszukiwanie katalogowu ze spacjami wywala bledy
-		eval $KOMENDA > ${MIEJSCE_ZAPISU}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY}/tocopy_${KLIENT_POCZTY}.txt && log "$(TM) - I found and saved link to ${KLIENT_POCZTY} archives " || log "$(TM) - I did not find archives in ${KLIENT_POCZTY}"
-
- 	else 
-		log "$(TM) - I did not find ${KLIENT_POCZTY} folder in ${SCIEZKA_DO_KATALOGU_KLIENTA}"
-	fi
-
-done
 
