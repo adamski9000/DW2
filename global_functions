@@ -1,0 +1,5 @@
+#!/bin/bash
+
+log() { echo $1 >> ${MIEJSCE_ZAPISU}/log.txt && echo $1; }
+
+TM() { echo `date "+%H:%M:%S"`; }

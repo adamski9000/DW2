@@ -93,7 +93,7 @@ wyszukaj_konta_uzytkownikow() {
 		
 	done
 		#wyklucza stale katalogi Default i Public i wyswietla tylo 9 kolumne z wiersza z nazwa katalogu. Ta nazwa katalogu okresla uzytkownika systemu.
-		#awk '($9 !="Default") && ($9 !="Public") { print $9 }' > ${MIEJSCE_ZAPISU}/system_info/win_users && log "6) $(TM) I found User's name acounts on ${PARTYCJA} and saved it. OK" || log "I coudn NOT find User's name acounts on ${PARTYCJA}"
+		#awk '($9 !="Default") && ($9 !="Public") { print $9 }' 
 	
 	#jesli plik nie istnieje lub jest pusty koniec programu
 	PLIK=${MIEJSCE_ZAPISU}/system_info/win_users

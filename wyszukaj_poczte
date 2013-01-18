@@ -12,11 +12,13 @@ TM() { echo `date "+%H:%M:%S"`; }
 
 WYBRANI_UZYTKOWNICY=$1
 MIEJSCE_ZAPISU=$2
+#zmienna do umieszczania zsumowanej ilosci poczty w mb do skopiowania
+let POCZTA_W_MB=0
 
 # oddzielamy wybrane konta od siebie spacją; np WYBRANI_UZYTKOWNICY=TRUE|admin|sda1 TRUE|uzytkownik2|sda1
 for UZYTKOWNIK0 in `echo $WYBRANI_UZYTKOWNICY | awk -F" " '{ print }'`
 do
-	# oddzielamy wybrane konta od siebie | np na wyjsciu UZYTKOWNIK2=TRUE|admin|sda1
+	# oddzielamy wybrane konta od siebie | np na wyjsciu UZYTKOWNIK=TRUE|admin|sda1 i pobieramy admin
 	for UZYTKOWNIK in `echo $UZYTKOWNIK0 | cut -d '|' -f2`
 	do
 		#po koleji sprawdzamy dla kadego z klientow
@@ -42,6 +44,7 @@ do
 				log "11b1) $(TM) - $KLIENT_POCZTY is not suported. Program exit. Error"; exit
 			fi
 
+			#sprawdzamy na kazdej z partycji
 			for PARTYCJA in `cat ${MIEJSCE_ZAPISU}/system_info/partitions_system_win`
 			   do
 				log "11c) $(TM) - I am looking for ${KLIENT_POCZTY} folders on ${PARTYCJA} in ${UZYTKOWNIK} profile"
@@ -54,12 +57,34 @@ do
 		
 					#tworzy katalogi z podkatalogami jesli nie ma
 					mkdir -p ${MIEJSCE_ZAPISU}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY} && log "11e) $(TM) - ${KLIENT_POCZTY} Mail folders on destination drive correct. OK" || { TXT="11e1) $(TM) I coud NOT create ${KLIENT_POCZTY} Mail folders on destination drive. Program finished. Error."; log $TXT; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="${TXT}"; exit; } 
-
+					#komenda z wyszukiwaniem katalogow
 					KOMENDA="find /media/${PARTYCJA}/Users/${UZYTKOWNIK}/${SCIEZKA_DO_PLIKOW} ${CZEGO_SZUKAMY}"
-		
+					PLIK_Z_KATALOGAMI_POCZTY="${MIEJSCE_ZAPISU}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY}/tocopy_${KLIENT_POCZTY}" 
 					#musimy zastosowac eval gdyz bez tego wyszukiwanie katalogowu ze spacjami wywala bledy
-					eval $KOMENDA > ${MIEJSCE_ZAPISU}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY}/tocopy_${KLIENT_POCZTY} && log "11f) $(TM) - I found and saved link to ${KLIENT_POCZTY} archives for ${UZYTKOWNIK} profile" || log "11f1) $(TM) - I can NOT save file with ${KLIENT_POCZTY} archive for ${UZYTKOWNIK} profile. Error"
-
+					eval $KOMENDA > $PLIK_Z_KATALOGAMI_POCZTY
+					#jesli plik zostal poprawnie zapisany
+					if [ "$?" == 0 ]; then
+						log "11f) $(TM) - I found and saved link to ${KLIENT_POCZTY} archives for ${UZYTKOWNIK} profile"
+						PLIK_Z_KATALOGAMI_POCZTY="${MIEJSCE_ZAPISU}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY}/tocopy_${KLIENT_POCZTY}"
+						#jesli plik nie jest pusty
+						if [ -s $PLIK_Z_KATALOGAMI_POCZTY ]; then
+							#wczytujemy po koleji z pliku nazwy katalogow w ktorych jest poczta celem zsumowania ilosci w mb
+							log "11g) $(TM) - I count needed space for ${KLIENT_POCZTY} in ${UZYTKOWNIK} profile"
+							while read KATALOG
+							do
+								#zlicza w mb ilosc zajmowanego miejsca przez katalogi poczty
+								#wyswietla: ilosc ilosc
+								POCZTA_W_MB0=`du -scm "$KATALOG" | awk '{ print $1 }'`
+								POCZTA_W_MB0=`echo $POCZTA_W_MB0 | awk -F" " '{ print $1 }'` 
+								#dodajemy do siebie ilosc w mb wszystkich katalogow z poczta
+								let "POCZTA_W_MB=$POCZTA_W_MB + $POCZTA_W_MB0"
+								log "11h) $(TM) - I need ${POCZTA_W_MB0} MB for ${KLIENT_POCZTY} in ${UZYTKOWNIK} profile"
+							done < $PLIK_Z_KATALOGAMI_POCZTY 
+							log "11i) $(TM) - I need ${POCZTA_W_MB} MB to copy all copy files"
+						fi	
+					else
+						log "11f1) $(TM) - I can NOT save file with ${KLIENT_POCZTY} archive for ${UZYTKOWNIK} profile. Error"
+					fi
 			 	else 
 					log "11c1) $(TM) - I did not find ${KLIENT_POCZTY} folder in ${UZYTKOWNIK} profile"
 				fi
@@ -69,11 +94,13 @@ do
 	done
 done
 
-#musimy sprawdzic co znalazl i wybrac ktore klienty skopiowac
-#./dewin_select_client 
 
-
-
+#sprawdzamy ilosc wolnego miejsca na dysku gdzie chcemy zapisac skopiowana poczte
+WOLNE_MIEJSCE=`df -hm "${MIEJSCE_ZAPISU}" | awk '{ print $4 }'`
+WOLNE_MIEJSCE=`echo $WOLNE_MIEJSCE | awk -F" " '{ print $2 }'`
+echo $WOLNE_MIEJSCE
+#gdy poczta zajmuje wiecej miejsca niz jest dostepne na dysku docelowym
+[ $WOLNEGO_MIEJSCE > $POCZTA_W_MB ] && log "11j) $(TM) - All needed mail data it is ${POCZTA_W_MB} MB. On your selected drive is ${WOLNEGO_MIEJSCE} MB. OK" || { TXT="11j) $(TM) All needed mail data it is ${POCZTA_W_MB} MB. On your selected drive is only <b>${WOLNEGO_MIEJSCE} </b>MB !. I coud NOT copy all data mail on destination drive. Change destination drive. Program finished. Error."; log $TXT; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="${TXT}"; exit; } 
 
 
 

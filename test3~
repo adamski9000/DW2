@@ -1,15 +1,64 @@
 #!/bin/bash -x
 
-test()
-{
-	echo "func test3"
-}
+d="/media/sda1/Users/admin/AppData/Local/Microsoft/Windows Live Mail"
 
-./test2
+WYBRANI_UZYTKOWNICY="TRUE|admin|sda1 TRUE|uzytkownik2|sda1"
+MIEJSCE_ZAPISU="/home/adam/DW2/a_130117_001838"
 
-test
+#let ILOSC2=9999
 
-z="ZZZZZZZZZ"
+#PLIK=`cat ~/DW2/a_130117_001838/Users/admin/Mail/WLM/tocopy_WLM`
 
-log $z
+#wyswietla: ilosc ilosc
+#ILOSC=`du -sc "$PLIK" | awk '{ print $1 }'`
+#ILOSC=`echo $ILOSC | awk -F" " '{ print $1 }'` 
+
+#let "ILOSC2=$ILOSC + $ILOSC2"
+
+#echo $ILOSC2
+
+#echo "---- $MB"
+
+let ILOSC=0
+
+for UZYTKOWNIK0 in `echo $WYBRANI_UZYTKOWNICY | awk -F" " '{ print }'`
+do
+	# oddzielamy wybrane konta od siebie | np na wyjsciu UZYTKOWNIK=TRUE|admin|sda1 i pobieramy admin
+	for UZYTKOWNIK in `echo $UZYTKOWNIK0 | cut -d '|' -f2`
+	do
+		#po koleji sprawdzamy dla kadego z klientow
+		for KLIENT_POCZTY in Outlook WLM Thunderbird
+		do 
+			PLIK="${MIEJSCE_ZAPISU}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY}/tocopy_${KLIENT_POCZTY}"
+			#jesli plik stnieje i nie jest pusty
+			if [ -s "$PLIK" ]; then
+				#wczytujemy po koleji z pliku katalogi  w ktorych jest poczta
+				while read KATALOG
+				do
+					#zlicza w mb ilosc zajmowanego miejsca przez katalogi poczty
+					#wyswietla: ilosc ilosc
+					ILOSC0=`du -scm "$KATALOG" | awk '{ print $1 }'`
+					ILOSC0=`echo $ILOSC0 | awk -F" " '{ print $1 }'` 
+
+					let "ILOSC=$ILOSC0 + $ILOSC"
+
+					echo $ILOSC
+				done < "$PLIK"
+			fi
+		done
+	done
+done
+
+echo $ILOSC
+
+#sprawdzamy ilosc wolnego miejsca na dysku gdzie chcemy zapisac skopiowana poczte
+WOLNE_MIEJSCE=`df -hm "${MIEJSCE_ZAPISU}" | awk '{ print $4 }'`
+WOLNE_MIEJSCE=`echo $WOLNE_MIEJSCE | awk -F" " '{ print $2 }'`
+echo $WOLNE_MIEJSCE
+[ $WOLNEGO_MIEJSCE > $ILOSC ] && echo "OK" || echo "NO"
+
+
+
+
+
 

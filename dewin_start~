@@ -197,7 +197,7 @@ log "6) $(TM) - I look for User's acounts on Windows system"
 wyszukaj_konta_uzytkownikow
 
 #wczytuje plik do wyboru opcji
-log "7) $(TM) - I try to run script with select options: dewin_select"
+log "7) $(TM) - I try to run script to select options: dewin_select"
 ./dewin_select "$MIEJSCE_ZAPISU"
 
 
