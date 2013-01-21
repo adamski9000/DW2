@@ -1,5 +1,5 @@
 #!/bin/bash
 
-log() { echo $1 >> ${MIEJSCE_ZAPISU}/log.txt && echo $1; }
+log() { echo $1 >> ${MIEJSCE_ZAPISU}/log.txt && echo $1 || echo "Problem with save log file"; }
 
 TM() { echo `date "+%H:%M:%S"`; }

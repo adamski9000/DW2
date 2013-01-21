@@ -1,8 +1,10 @@
-#!/bin/bash -x
+#!/bin/bash 
 
-log() { echo $1 >> ${MIEJSCE_ZAPISU}/log.txt && echo $1; }
+#w skrypcie wybieramy uzytkownika od ktorego chcemy skopiwac dane poczty z profilu
 
-TM() { echo `date "+%H:%M:%S"`; }
+MIEJSCE_ZAPISU=$1
+
+source ./global_functions
 
 wyswietl_w_gui_uzytkownika_i_dysk() {
 	#rozdzielamy sciezke np. sda1:uzytkownik na skladowe i wyswietlamy uzytkownika i dysk 
@@ -14,15 +16,14 @@ wyswietl_w_gui_uzytkownika_i_dysk() {
 	done < ${MIEJSCE_ZAPISU}/system_info/win_users
 }
 
-[[ "$#" != 1  ]] && { log "8) $(TM) - Script started without enough parameters( $1 ). Error"; exit; } || log "8) $(TM) Script ran with parameters: $1 correct "
-
-MIEJSCE_ZAPISU=$1
+[[ "$#" != 1  ]] && { log "8) $(TM) - Script started without enough parameter ( $1 ). Error"; exit; } || log "8) $(TM) Script ran with parameter: $1"
 
 #gui - wyswietla dialog z wyborem kont uzytkownikow  
 log "9) $(TM) - I select in GUI users names acounts"
-WYBRANI_UZYTKOWNICY=$(yad --list --checklist --title="$NAZWA_PROGRAMU" --text="I found Windows user's data acount on this computer. <br>What User's data acount do you want to copy ?" --width 300 --height 300 --button="gtk-ok:0" --column "" --column "ACOUNT" --column "DISK" $(wyswietl_w_gui_uzytkownika_i_dysk))
+WYBRANI_UZYTKOWNICY=$(yad --list --checklist --title="$NAZWA_PROGRAMU" --text="I found Windows user's data acount on this computer. What User's data acount do you want to copy ?" --width 300 --height 300 --button="gtk-ok:0" --column "" --column "ACOUNT" --column "DISK" $(wyswietl_w_gui_uzytkownika_i_dysk))
+
 #sprawdza czy wybrano cokolwiek, na wyjsciu WYBRANI_UZYTKOWNICY=TRUE|admin|sda1 TRUE|uzytkownik2|sda1
-[[ "$WYBRANI_UZYTKOWNICY" != "" ]] && log "10) $(TM) - I selected users names acounts ${WYBRANI_UZYTKOWNICY}" || { TXT="10) $(TM) No selected users names acounts. Finish program"; log $TXT; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text=$TXT; exit; }
+[[  "$WYBRANI_UZYTKOWNICY" != "" ]] && log "10) $(TM) - I selected users names acounts ${WYBRANI_UZYTKOWNICY}" || { TXT="No selected users names acounts. Finish program"; log "10) $(TM) ${TXT}"; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="${TXT}"; exit; }
 #na wyjsciu np WYBRANI_UZYTKOWNICY=TRUE|admin|sda1 TRUE|uzytkownik2|sda1
 
 log "11) $(TM) - I try to run script with searching email cilents"

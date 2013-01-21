@@ -11,7 +11,7 @@ NAZWA_PROGRAMU="Detective Windows 0.56"
 IKONA=~/DW/main/graf/DooFi_detective64.png
 PLIK_LICENCJA="welcome.txt"
 
-log() { echo $1 >> ${MIEJSCE_ZAPISU}/log.txt && echo $1; }
+log() { echo $1 >> ${MIEJSCE_ZAPISU}/log.txt && echo $1 || echo "Problem with save log file"; }
 
 TM() { echo `date "+%H:%M:%S"`; }
 
@@ -27,7 +27,7 @@ zamontuj_partycje() {
 
 	
 	[ "$PARTYCJE" == "" ] && { 
-		TXT="$(TM) - This computer has no NTFS / FAT disks or I van NOT find it ! Program finished"
+		TXT="This computer has no NTFS / FAT disks or I van NOT find it ! Program finished"
 		yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="<b>${TXT}</b>"
 		echo $TXT 
 		exit 
@@ -69,7 +69,7 @@ wyszukaj_partycje_systemowa_win() {
 	#sprawdzamy czy wogole znaleziono jakies dyski systemowe.
 	#jesli plik nie istnieje lub jest pusty to koniec
 	PLIK="${MIEJSCE_ZAPISU}/system_info/partitions_system_win"
-	[ ! -e $PLIK -a ! -s $PLIK ] && { TXT="$(TM) - This computer has NOT disks with operating system Windows or I can NOT find it. Program finished !"; yad --title="${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text=$TXT; log $TXT; exit; }
+	[ ! -e $PLIK -a ! -s $PLIK ] && { TXT="This computer has NOT disks with operating system Windows or I can NOT find it. Program finished !"; yad --title="${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="${TXT}"; log "$(TM) - ${TXT}"; exit; }
 }
 
 wyszukaj_konta_uzytkownikow() {
@@ -97,7 +97,7 @@ wyszukaj_konta_uzytkownikow() {
 	
 	#jesli plik nie istnieje lub jest pusty koniec programu
 	PLIK=${MIEJSCE_ZAPISU}/system_info/win_users
-	[ ! -e "${PLIK}" -o ! -s "${PLIK}" ] && { TXT="No Windows users acounts on checked disks. Program finished"; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="<b>${TXT}</b>"; log $TXT; exit; }
+	[ ! -e "${PLIK}" -o ! -s "${PLIK}" ] && { TXT="No Windows users acounts on checked disks. Program finished"; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="<b>${TXT}</b>"; log "${TXT}"; exit; }
 }
 
 
@@ -141,11 +141,9 @@ echo "$(TM) GUI - User inserted in GUI name of case: ${NAZWA_SPRAWY}"
 #gdy pole jest puste to koniec programu
 [ "$NAZWA_SPRAWY" == "" ] && { echo "$(TM) GUI - Name of case inserted in GUI is empty. Finished program"; exit;  }
 
-#usowamy separator | dodany na koncu przez yad
-NAZWA_SPRAWY=$(echo $NAZWA_SPRAWY | tr -d "|" )
-
-#zamieniamy spacje na podkreslenia
-NAZWA_SPRAWY=$(echo $NAZWA_SPRAWY | tr " " "_")
+#filtrujemy dane wejsciowe
+#usowamy wszystkie znaki inne anizeli podane w zakresie a nastepnie zamieniamy spacje na podkreslenia
+NAZWA_SPRAWY=$(echo $NAZWA_SPRAWY | tr -cd 'a-z A-Z0-9' | tr " " "_")
 
 #data bedzie czescia katalogu. Dzieki temu unikniemy problemow z tymi samymi nazwami katalogow
 CZAS_UTWORZENIA=`date "+%y%m%d_%H%M%S"`

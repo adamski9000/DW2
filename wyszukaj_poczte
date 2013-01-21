@@ -1,17 +1,16 @@
-#!/bin/bash -x
+#!/bin/bash
 
 #format wywolania skryptu: wyszukaj_poczte uzytkowniksystemu klient_poczty. Np. wyszukaj_poczte admin WLM
 #wyszukuje poczte na kazdym koncie uzytkownika
 
-log() { echo $1 >> ${MIEJSCE_ZAPISU}/log.txt && echo $1; }
+WYBRANI_UZYTKOWNICY=$1
+MIEJSCE_ZAPISU=$2
 
-TM() { echo `date "+%H:%M:%S"`; }
+source ./global_functions
 
 #zabezpieczenie. Jesli za malo parametrow koniec skryptu
 [[ "$#" != 2  ]] && { echo "11a) $(TM) - Script started without enough parameters( $1, $2 ). Error"; exit; } || log "11a1) $(TM) Script ran with parameters: $1 , $2 correct " 
 
-WYBRANI_UZYTKOWNICY=$1
-MIEJSCE_ZAPISU=$2
 #zmienna do umieszczania zsumowanej ilosci poczty w mb do skopiowania
 let POCZTA_W_MB=0
 
@@ -24,7 +23,7 @@ do
 		#po koleji sprawdzamy dla kadego z klientow
 		for KLIENT_POCZTY in Outlook WLM Thunderbird
 		do 
-			log "11b) $(TM) I prepare to search email client ${KLIENT_POCZTY} for user ${UZYTKOWNIK}"
+			log "11b) $(TM) - I prepare to search email client ${KLIENT_POCZTY} for user ${UZYTKOWNIK}"
 			
 			if [[ "$KLIENT_POCZTY" == "Outlook" ]]; then
 				SCIEZKA_DO_KATALOGU_KLIENTA="AppData/Local/Microsoft/Outlook"
@@ -56,7 +55,7 @@ do
 					log "11d) $(TM) - I found ${KLIENT_POCZTY} folder in ${UZYTKOWNIK} profile"
 		
 					#tworzy katalogi z podkatalogami jesli nie ma
-					mkdir -p ${MIEJSCE_ZAPISU}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY} && log "11e) $(TM) - ${KLIENT_POCZTY} Mail folders on destination drive correct. OK" || { TXT="11e1) $(TM) I coud NOT create ${KLIENT_POCZTY} Mail folders on destination drive. Program finished. Error."; log $TXT; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="${TXT}"; exit; } 
+					mkdir -p ${MIEJSCE_ZAPISU}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY} && log "11e) $(TM) - ${KLIENT_POCZTY} Mail folders on destination drive correct. OK" || { TXT="I coud NOT create ${KLIENT_POCZTY} Mail folders on destination drive. Program finished. Error."; log "11e1) $(TM) ${TXT}"; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="${TXT}"; exit; } 
 					#komenda z wyszukiwaniem katalogow
 					KOMENDA="find /media/${PARTYCJA}/Users/${UZYTKOWNIK}/${SCIEZKA_DO_PLIKOW} ${CZEGO_SZUKAMY}"
 					PLIK_Z_KATALOGAMI_POCZTY="${MIEJSCE_ZAPISU}/Users/${UZYTKOWNIK}/Mail/${KLIENT_POCZTY}/tocopy_${KLIENT_POCZTY}" 
@@ -80,7 +79,7 @@ do
 								let "POCZTA_W_MB=$POCZTA_W_MB + $POCZTA_W_MB0"
 								log "11h) $(TM) - I need ${POCZTA_W_MB0} MB for ${KLIENT_POCZTY} in ${UZYTKOWNIK} profile"
 							done < $PLIK_Z_KATALOGAMI_POCZTY 
-							log "11i) $(TM) - I need ${POCZTA_W_MB} MB to copy all copy files"
+							log "11i) $(TM) - I need ${POCZTA_W_MB} MB to copy all needed files"
 						fi	
 					else
 						log "11f1) $(TM) - I can NOT save file with ${KLIENT_POCZTY} archive for ${UZYTKOWNIK} profile. Error"
@@ -96,11 +95,13 @@ done
 
 
 #sprawdzamy ilosc wolnego miejsca na dysku gdzie chcemy zapisac skopiowana poczte
+log "12) $(TM) - I count free space on your destination disk"
 WOLNE_MIEJSCE=`df -hm "${MIEJSCE_ZAPISU}" | awk '{ print $4 }'`
 WOLNE_MIEJSCE=`echo $WOLNE_MIEJSCE | awk -F" " '{ print $2 }'`
-echo $WOLNE_MIEJSCE
+log "12) $(TM) - free space on your destination disk: $WOLNE_MIEJSCE MB"
+
 #gdy poczta zajmuje wiecej miejsca niz jest dostepne na dysku docelowym
-[ $WOLNEGO_MIEJSCE > $POCZTA_W_MB ] && log "11j) $(TM) - All needed mail data it is ${POCZTA_W_MB} MB. On your selected drive is ${WOLNEGO_MIEJSCE} MB. OK" || { TXT="11j) $(TM) All needed mail data it is ${POCZTA_W_MB} MB. On your selected drive is only <b>${WOLNEGO_MIEJSCE} </b>MB !. I coud NOT copy all data mail on destination drive. Change destination drive. Program finished. Error."; log $TXT; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="${TXT}"; exit; } 
+[ $WOLNE_MIEJSCE > $POCZTA_W_MB ] && log "13) $(TM) - All founded mail data it is ${POCZTA_W_MB} MB. On your selected drive is ${WOLNE_MIEJSCE} MB. OK" || { TXT="All founded mail data it is ${POCZTA_W_MB} MB. On your selected drive is only${WOLNE_MIEJSCE} MB !. I coud NOT copy all data mail on destination drive. Change destination drive and start program again. Program finished. Error."; log "13) $(TM) $TXT"; yad --title "${NAZWA_PROGRAMU}" --button="gtk-ok:0" --width 300 --text="${TXT}"; exit; } 
 
 
 

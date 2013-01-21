@@ -1,10 +1,13 @@
 #!/bin/bash -x
 
-A2="AAAAAAAAAAA - $z - AAAAAA"
+b="ihu----9889=jo8"
 
-test()
-{
-	echo "func test2"
-}
+a='aaaaaaaaaaaaihu----//9889\\.. .{{}}=jo8 +++n4 44xxxxxxxxxxxxx' 
 
-test
+echo ${a} | tr -cd 'a-z A-Z0-9' | tr " " "_"
+
+echo -n
+
+
+
+
